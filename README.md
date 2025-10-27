@@ -60,13 +60,27 @@ The pipeline is divided into two main stages:
     python run_scripts/disk_integrate.py -g grid_name -l line -n 100 -p 50 
     ```
 
-    where the inputs are the following:
-        -g: (required) name of the grid folder 
-        -l: (required) line you are working with (options: Fe6173, Fe5250, Fe6271, Fe6152)
-        -n: (otpional) number of instances to calculate (defaults to 100)
-        -p: number of parallel processes to use (defaults to available cores)
+    - where the inputs are the following:
+        - -g: (required) name of the grid folder 
+        - -l: (required) line you are working with (options: Fe6173, Fe5250, Fe6271, Fe6152)
+        - -n: (otpional) number of instances to calculate (defaults to 100)
+        - -p: number of parallel processes to use (defaults to available cores)
 
     - Results will be stored in grid_name/output_data 
+
+## Additional scipts
+
+- line_creation/ 
+    - contains python scipt to generate the line profiles at any given limb angle - make_lines.py 
+    - make_lines_example.ipynb contains example usage 
+
+- analyse_results/
+    - compute_metrics.py: functions to calculate line bisectors/RVs/equivalent widths etc. 
+    - degrade_profiles.py: functions to degrade resolution and add photon noise to profiles 
+    - noise_free_correlations.ipynb: example usage to look for correlations in noise-free profiles
+    - noisy_correlations.ipynb: example usage to assess impact of photon noise 
+
+        
 
 
 
