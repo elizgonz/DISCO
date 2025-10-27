@@ -7,7 +7,7 @@ class StellarGrid:
     def __init__(self, *args, **kwargs):
         self.star_dict = kwargs.pop('star_dict')
         self.rstar = self.star_dict['rstar']
-        self.tile_width = self.star_dict['tile_width'] #units of Rsun
+        self.tile_width = self.star_dict['tile_width'] 
         self.subtile_width = self.star_dict['subtile_width'] 
         self.inc = (self.star_dict['inc'])*np.pi/180  #passed in degrees, convert to radians
 
@@ -117,10 +117,6 @@ class StellarGrid:
         Cartesian coordinates of the point on the stellar axis coordinate.
         """
 
-        # x = self.rstar * np.cos(phi) * np.sin(theta)
-        # y = self.rstar * np.cos(phi) * np.cos(theta)
-        # z = self.rstar * np.sin(phi)
-
         x = self.rstar * np.cos(phi) * np.sin(theta)
         y = self.rstar * np.sin(phi)
         z = self.rstar * np.cos(phi) * np.cos(theta)
@@ -168,7 +164,7 @@ class StellarGrid:
         subtile_num_tile = int(subtile_num_slice / self.tile_num(phi_c))
         print('Subtile num tile: ', subtile_num_tile)
 
-        latitude_num = subtile_num_tile #int(abs(phi_low - phi_high) / self.subtile_width)
+        latitude_num = subtile_num_tile 
 
         latitude_array = np.linspace(phi_low, phi_high, latitude_num)
 
@@ -227,11 +223,11 @@ class StellarGrid:
 
         #rotational velocity in degrees per day
         omega_degdays = A + B * np.sin(phi) ** 2 + C * np.sin(phi) ** 4
+
         #convert to radians per second
         omega_radsec = omega_degdays * (2 * np.pi / 360) * (1 / 86400)
-        #convert to linear velocity in m/s
-        #v_rot = omega_radsec * (self.rstar * con.R_sun.to(un.m).value)  * np.cos(phi) #m/s
 
+        #convert to linear velocity in m/s
         v_rot = omega_radsec * (self.rstar * 10**6 * np.cos(phi)) #m/s
 
         return v_rot  #linear velocity of the tile at this latitude
@@ -324,19 +320,7 @@ class StellarGrid:
                 # Save the polar coordinates
                 phi_df.append(phi)
                 theta_df.append(tile_theta)
-                ###############################
-                # Get the position of the center of the tile on the stellar axis position
-                # phi_theta = [(p, t) for p, t in
-                #              zip([phi, phi1, phi2, phi3, phi4], [tile_theta, theta1, theta2, theta3, theta4])]
-
-                # Save the Cartesian coordinates, for the center and all four corners.
-                # for k in range(5):
-                #     xs, ys, zs = self.get_stellar_axis_position(phi=phi_theta[k][0], theta=phi_theta[k][1])
-                #     t_star[k].append([xs, ys, zs])
-                #
-                #     x, y, z = self.get_sky_axis_position(phi=phi_theta[k][0], theta=phi_theta[k][1])
-                #     t_sky[k].append([x, y, z])
-                ################################
+                
                 ######## Stellar axis position ##########
                 coords_star_c = self.get_stellar_axis_position(phi=phi, theta=tile_theta)
                 coords_star_1 = self.get_stellar_axis_position(phi=phi1, theta=theta1)
@@ -393,16 +377,13 @@ class StellarGrid:
 
                 ## Calculate los and then inclined projection 
                 j_dir = np.sin(tile_theta)*np.sin(self.inc)
-                #j_dir = coords_sky_c[2]/np.sqrt(coords_sky_c[0]**2 + coords_sky_c[1]**2 + coords_sky_c[2]**2) # line of sight direction
                 v_diff = self.get_vel_rot(phi) # differential rotation velocity at this latitude
                 los_vel = j_dir * v_diff #velocity directed along z axis - line of sight velocity
-                
 
                 lin_vels.append(v_diff) # linear velocity of the tile at this latitude
                 los_vel_sky.append(np.round(los_vel,8))
 
                 proj_area = area_factor * tile_area * np.sqrt(1 - (coords_sky_c[0]/self.rstar)**2 - (coords_sky_c[1]/self.rstar)**2)
-                #print(len(corners_y_plus), coords_sky_c[0], coords_sky_c[2], proj_area)
                 proj_area_df.append(proj_area)
                 area_df.append(tile_area)     
 
@@ -410,7 +391,7 @@ class StellarGrid:
                 hc_df.append(heliocentric_angle*(180/np.pi)) # convert to degrees
 
 
-        # ### convert all lists to arrays first before saving in data frame
+        #### convert all lists to arrays first before saving in data frame
         tiles_all = np.array(tiles_all) 
         tiles_sky = np.array(tiles_sky)
         tiles_sky_complete = np.array(tiles_sky_complete)

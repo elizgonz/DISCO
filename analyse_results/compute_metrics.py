@@ -247,11 +247,8 @@ def calculate_line_bisector(og_wavelength, og_flux, num_levels=50, lower = 0.1, 
     flux = og_flux[~np.isnan(og_flux)]
     wavelength = og_wavelength[~np.isnan(og_flux)]
     
-    # Define flux levels based on the actual flux range (cutting the bottom and top 10%)
+    # Define flux levels based on the actual flux range 
     min_flux, max_flux = min(flux), max(flux)
-    # flux_levels = np.linspace(min_flux + 0.15 * (max_flux - min_flux),
-    #                           min_flux + 0.85 * (max_flux - min_flux),
-    #                           num_levels)
 
     depth = max_flux - min_flux
     lower_bound = min_flux + lower * depth
