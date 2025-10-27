@@ -1,19 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
-from scipy.spatial import ConvexHull
-import matplotlib.patches as patches
-from scipy.spatial import ConvexHull
-import matplotlib.animation as animation
-import io 
-import imageio
-from scipy.stats import norm
-from scipy.io import readsav
-from scipy.interpolate import interp1d
 import random
-import os
-from astropy import constants as con
-from astropy import units as un
 
 class StellarGrid:
 

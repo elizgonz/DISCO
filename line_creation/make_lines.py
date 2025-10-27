@@ -40,7 +40,7 @@ def exponential(x, a, a2, b, b2, c):
 class LineProfileGenerator:
     def __init__(self, line):
         self.line = line
-        base_path = f'/home/astro/phrrdx/stellar_absorption_lines/line_creation/data/{line}'
+        base_path = f'line_creation/data/{line}'
 
         self.mean_profile_gt = np.load(f'{base_path}/component_profiles/mean_profile_gt.npy')
         self.mean_profile_ogr = np.load(f'{base_path}/component_profiles/mean_profile_ogr.npy')
