@@ -85,8 +85,8 @@ def degrade_and_rebin(wl_nm, flux, R=190000, pixels_per_fwhm=4,
                               conv_oversample=10, kernel_nsigma=6):
     """
     Degrade a normalized stellar absorption line to a Gaussian LSF of resolving
-    power R (default 700,000), and compute residuals after flux-conserving
-    rebinning onto a common log-wavelength grid with ~pixels_per_fwhm
+    power R (default 190,000) and flux-conserving
+    rebin onto a common log-wavelength grid with ~pixels_per_fwhm
     sampling of the LSF FWHM.
 
     Parameters
@@ -96,7 +96,7 @@ def degrade_and_rebin(wl_nm, flux, R=190000, pixels_per_fwhm=4,
     flux : 1D array
         Normalized flux (flux density per nm) at wl_nm.
     R : float
-        Resolving power R = lambda / Delta_lambda (default 700000).
+        Resolving power R = lambda / Delta_lambda (default 190000).
     pixels_per_fwhm : int
         Target number of output pixels per LSF FWHM (default 4).
     conv_oversample : int
@@ -110,7 +110,7 @@ def degrade_and_rebin(wl_nm, flux, R=190000, pixels_per_fwhm=4,
     Returns
     -------
     wl_common : 1D array
-        Common output wavelength grid (nm; logarithmic spacing).
+        Common output wavelength grid (nm).
     flux_orig_common : 1D array
         The original input spectrum rebinned (flux density per nm) onto wl_common
         using a flux-conserving algorithm (Carnall 2017 style).
@@ -133,11 +133,10 @@ def degrade_and_rebin(wl_nm, flux, R=190000, pixels_per_fwhm=4,
 
     # -------------------
     # 2) build convolution grid in ln(lambda)
-    # in log-lambda units the FWHM is 1/R (dimensionless), so dx choices:
+
     x = np.log(wl_nm)                # natural log of wavelength
     x_min, x_max = x[0], x[-1]
 
-    # sigma in x = sigma_v / c = 1 / (2*sqrt(2 ln 2) * R)
     sigma_x = 1.0 / (2.0 * np.sqrt(2.0 * np.log(2.0)) * R)
 
     # dx for the convolution grid (log-lambda) chosen so that there are
@@ -164,8 +163,6 @@ def degrade_and_rebin(wl_nm, flux, R=190000, pixels_per_fwhm=4,
 
     # -------------------
     # 4) build Gaussian kernel in x (log-lambda) domain and convolve
-    # kernel sigma in x is sigma_x (computed above)
-    # compute sigma in pixels for kernel sizing
     sigma_pix = sigma_x / dx_conv
     half_width_pix = int(np.ceil(8.0 * sigma_pix))  # ±8 sigma
     pix_idx = np.arange(-half_width_pix, half_width_pix + 1, dtype=float)
@@ -174,8 +171,6 @@ def degrade_and_rebin(wl_nm, flux, R=190000, pixels_per_fwhm=4,
     kernel /= kernel.sum()  # normalize discrete kernel to 1
 
     # discrete convolution (same-length, kernel normalized)
-    # np.convolve is fine here (signal sizes typical); if performance is a concern
-    # for very large arrays, replace with FFT convolution.
     conv_flux_per_x = np.convolve(flux_per_x, kernel, mode='same')
 
     # convert back to flux density per nm:
