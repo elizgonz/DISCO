@@ -1,6 +1,7 @@
-# DISCO - Disk Integrated Stellar Convection 
+# DISCO - Disk Integrated Stellar COnvection 
 
-This repository contains a set of Python scripts to generate and analyse **disk-integrated stellar absorption line profiles**.  
+This repository contains a set of Python scripts to generate and analyse **disk-integrated stellar absorption line profiles containing only the effects of granulation**.  
+
 The workflow involves creating a stellar surface grid, generating local spectral line profiles, and integrating them across the visible disk to simulate observed stellar spectra.
 
 ---
