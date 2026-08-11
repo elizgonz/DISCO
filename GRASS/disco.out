@@ -1,0 +1,60 @@
+========================================================
+Starting Slurm Job: disco (ID: 54732459)
+Node: p-mc-3472
+Tue Aug 11 11:12:44 EDT 2026
+========================================================
+--- GPU Info ---
+Tue Aug 11 11:12:46 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.159.03             Driver Version: 580.159.03     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla V100S-PCIE-32GB          On  |   00000000:8A:00.0 Off |                    0 |
+| N/A   30C    P0             24W /  250W |       0MiB /  32768MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+Working directory: /storage/home/efg5335/work/sw/DISCO/GRASS
+--- Setting CUDA runtime to 12.2.0 ---
+┌ Error: This version of CUDA.jl only supports CUDA 12 or higher (your toolkit provides CUDA 11.8.0)
+└ @ CUDACore ~/work/sw/julia_depot/packages/CUDACore/NlVPI/src/initialization.jl:157
+[ Info: Configure the active project to use CUDA 12.2; please re-start Julia for this to take effect.
+Successfully set CUDA runtime version to 12.2.0
+--- Starting Julia DISCO GPU Synthesis Test ---
+Precompiling packages...
+   3290.5 ms  ✓ CUDA_Runtime_jll
+  53460.3 ms  ✓ CUDA_Compiler_jll
+  43736.9 ms  ✓ CUDACore
+   4308.6 ms  ✓ cuFFT
+   5148.9 ms  ✓ cuRAND
+   5905.8 ms  ✓ NVML
+   6969.9 ms  ✓ CUPTI
+   8450.3 ms  ✓ cuSPARSE
+  10825.5 ms  ✓ cuBLAS
+   9649.4 ms  ✓ cuSOLVER
+  15616.7 ms  ✓ CUDATools
+   5732.2 ms  ✓ CUDA
+   4968.4 ms  ✓ Atomix → AtomixCUDAExt
+  13 dependencies successfully precompiled in 135 seconds. 89 already precompiled.
+  1 dependency had output during precompilation:
+┌ CUDA_Compiler_jll
+│  Downloading artifact: CUDA_Runtime
+│  ERROR: Data Error : jl_WVAtCL0nqb-download
+│       Failure artifact: CUDA_Runtime
+│   Downloading artifact: CUDA_Runtime
+└  
+DISCO GPU test passed: n_wave=458, flux range=(-1781.5638f0, 3145.0073f0)
+========================================================
+Julia exited with code: 0
+Tue Aug 11 11:15:20 EDT 2026
+========================================================
