@@ -2,7 +2,7 @@ module DISCOFe5250
 
 using CUDA
 using HDF5
-using Adapt
+using CUDA.Adapt
 
 export DISCOParams, DISCOParamsDevice, to_device, load_disco_fe5250
 export disco_component_value, disco_intensity
@@ -41,22 +41,28 @@ function DISCOParams(path::AbstractString)
         means = ntuple(3) do i
             Float32.(read(f["pca/$(COMP_NAMES[i])/mean_profile"]))
         end
+
+        # Ensure eigenprofiles is (n_pca, n_wave) in Julia
         phis = ntuple(3) do i
-            Float32.(read(f["pca/$(COMP_NAMES[i])/eigenprofiles"]))
+            raw = Float32.(read(f["pca/$(COMP_NAMES[i])/eigenprofiles"]))
+            if size(raw) == (n_pca, n_wave)
+                raw
+            elseif size(raw) == (n_wave, n_pca)
+                permutedims(raw)
+            else
+                error("Unexpected eigenprofiles size for $(COMP_NAMES[i]): $(size(raw))")
+            end
         end
+
+        # Ensure pca_coeff_grid is (n_pca, n_mu) in Julia
         grids = ntuple(3) do i
             raw = Float32.(read(f["pca/$(COMP_NAMES[i])/pca_coeff_grid"]))
-
             if size(raw) == (n_pca, n_mu)
                 raw
             elseif size(raw) == (n_mu, n_pca)
                 permutedims(raw)
             else
-                error(
-                    "Unexpected PCA grid size for $(COMP_NAMES[i]): ",
-                    "$(size(raw)); expected ($(n_pca), $(n_mu)) ",
-                    "or ($(n_mu), $(n_pca))"
-                )
+                error("Unexpected PCA grid size for $(COMP_NAMES[i]): $(size(raw))")
             end
         end
 
@@ -70,6 +76,7 @@ function DISCOParams(path::AbstractString)
 
         @assert length(wavelength) == n_wave
         @assert length(e1a) == n_mu && length(e2a) == n_mu
+        @assert size(phis[1]) == (n_pca, n_wave)
         @assert size(grids[1]) == (n_pca, n_mu)
 
         DISCOParams(wavelength, mu_min, mu_max, n_mu, n_wave, n_pca,
@@ -116,13 +123,15 @@ Adapt.@adapt_structure DISCOParamsDevice
 
 function to_device(p::DISCOParams)
     c(x) = CuArray(x)
-    DISCOParamsDevice(c(p.wavelength), p.mu_min, p.mu_max, Int32(p.n_mu),
+    DISCOParamsDevice(
+        c(p.wavelength), p.mu_min, p.mu_max, Int32(p.n_mu),
         Int32(p.n_wave), Int32(p.n_pca),
         c(p.mean_profiles[1]), c(p.mean_profiles[2]), c(p.mean_profiles[3]),
         c(p.eigenprofiles[1]), c(p.eigenprofiles[2]), c(p.eigenprofiles[3]),
         c(p.pca_coeff_grids[1]), c(p.pca_coeff_grids[2]), c(p.pca_coeff_grids[3]),
         c(p.e1_alpha), c(p.e1_zeta), c(p.e1_omega),
-        c(p.e2_alpha), c(p.e2_zeta), c(p.e2_omega))
+        c(p.e2_alpha), c(p.e2_zeta), c(p.e2_omega)
+    )
 end
 
 @inline function mu_index(
