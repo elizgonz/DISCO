@@ -22,9 +22,11 @@ struct DISCOParams
     e1_alpha::Vector{Float32}
     e1_zeta::Vector{Float32}
     e1_omega::Vector{Float32}
+    e1_med::Vector{Float32}
     e2_alpha::Vector{Float32}
     e2_zeta::Vector{Float32}
     e2_omega::Vector{Float32}
+    e2_med::Vector{Float32}
 end
 
 """Read the HDF5 file produced by export_disco_params.py."""
@@ -70,9 +72,12 @@ function DISCOParams(path::AbstractString)
         e1a = Float32.(read(d["epsilon1/alpha"]))
         e1z = Float32.(read(d["epsilon1/zeta"]))
         e1w = Float32.(read(d["epsilon1/omega"]))
+        e1m = Float32.(read(d["epsilon1/median"]))
+
         e2a = Float32.(read(d["epsilon2/alpha"]))
         e2z = Float32.(read(d["epsilon2/zeta"]))
         e2w = Float32.(read(d["epsilon2/omega"]))
+        e2m = Float32.(read(d["epsilon2/median"]))
 
         @assert length(wavelength) == n_wave
         @assert length(e1a) == n_mu && length(e2a) == n_mu
@@ -80,7 +85,7 @@ function DISCOParams(path::AbstractString)
         @assert size(grids[1]) == (n_pca, n_mu)
 
         DISCOParams(wavelength, mu_min, mu_max, n_mu, n_wave, n_pca,
-            means, phis, grids, e1a, e1z, e1w, e2a, e2z, e2w)
+            means, phis, grids, e1a, e1z, e1w, e1m, e2a, e2z, e2w, e2m)
     end
 end
 
@@ -113,10 +118,12 @@ struct DISCOParamsDevice{
     e1_alpha::V
     e1_zeta::V
     e1_omega::V
+    e1_med::V
 
     e2_alpha::V
     e2_zeta::V
     e2_omega::V
+    e2_med::V
 end
 
 Adapt.@adapt_structure DISCOParamsDevice
@@ -129,8 +136,8 @@ function to_device(p::DISCOParams)
         c(p.mean_profiles[1]), c(p.mean_profiles[2]), c(p.mean_profiles[3]),
         c(p.eigenprofiles[1]), c(p.eigenprofiles[2]), c(p.eigenprofiles[3]),
         c(p.pca_coeff_grids[1]), c(p.pca_coeff_grids[2]), c(p.pca_coeff_grids[3]),
-        c(p.e1_alpha), c(p.e1_zeta), c(p.e1_omega),
-        c(p.e2_alpha), c(p.e2_zeta), c(p.e2_omega)
+        c(p.e1_alpha), c(p.e1_zeta), c(p.e1_omega), c(p.e1_med),
+        c(p.e2_alpha), c(p.e2_zeta), c(p.e2_omega), c(p.e2_med)
     )
 end
 
@@ -174,6 +181,13 @@ end
 )
     i, t = mu_index(mu, p.mu_min, p.mu_max, p.n_mu)
 
+    # When epoch_seed == 0, evaluate exact deterministic median filling factors
+    if epoch_seed == UInt32(0)
+        e1 = interp(p.e1_med, i, t)
+        e2 = interp(p.e2_med, i, t)
+        return e1, e2
+    end
+
     a1 = interp(p.e1_alpha, i, t)
     z1 = interp(p.e1_zeta,  i, t)
     w1 = interp(p.e1_omega, i, t)
@@ -185,12 +199,7 @@ end
     seed = UInt32(patch_id) * UInt32(0x9e3779b9) + epoch_seed
 
     e1 = skewnormal(a1, z1, w1, seed)
-    e2 = skewnormal(
-        a2,
-        z2,
-        w2,
-        seed + UInt32(0x85ebca6b),
-    )
+    e2 = skewnormal(a2, z2, w2, seed + UInt32(0x85ebca6b))
 
     e1 = ifelse(e1 < 0f0, 0f0, ifelse(e1 > 1f0, 1f0, e1))
     e2 = ifelse(e2 < 0f0, 0f0, e2)
@@ -314,3 +323,4 @@ end
 end
 
 end
+
