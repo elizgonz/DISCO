@@ -8,13 +8,15 @@ using CUDA
 using Printf
 
 # Include DISCO Julia module
-include(joinpath(@__DIR__, "src", "disco_fe5250.jl"))
-using .DISCOFe5250
+include(joinpath(@__DIR__, "src", "DISCOJulia.jl"))
+using .DISCOJulia
+
+line = "Fe5250"
 
 function kernel_single_profile!(prof_d, p_device, mu, patch_id, epoch_seed)
     w = threadIdx().x + (blockIdx().x - 1) * blockDim().x
     if w <= length(prof_d)
-        prof_d[w] = DISCOFe5250.disco_intensity(p_device, mu, Int32(w), patch_id, epoch_seed)
+        prof_d[w] = DISCOJulia.disco_intensity(p_device, mu, Int32(w), patch_id, epoch_seed)
     end
     return nothing
 end
@@ -37,14 +39,14 @@ end
     compare_disco_python_julia(h5_path::String, disco_root::String)
 
 Validates point-by-point agreement between DISCO Python (LineProfileGenerator)
-and DISCO Julia (DISCOFe5250) across multiple viewing angles (μ = 1.0, 0.8, 0.5, 0.2).
+and DISCO Julia (DISCOJulia) across multiple viewing angles (μ = 1.0, 0.8, 0.5, 0.2).
 Plots profiles, residuals (Julia - Python), and prints RMS errors.
 """
 function compare_disco_python_julia(h5_path::String, disco_root::String)
     # 1. Initialize Python DISCO via PyCall
     pyimport("sys")["path"].insert(0, joinpath(disco_root, "line_creation"))
     make_lines = pyimport("make_lines")
-    py_gen = make_lines.LineProfileGenerator("Fe5250")
+    py_gen = make_lines.LineProfileGenerator(line)
 
     # 2. Initialize Julia DISCO parameters
     p_host = DISCOParams(h5_path)
@@ -88,7 +90,7 @@ function compare_disco_python_julia(h5_path::String, disco_root::String)
     end
 
     ax1.set_ylabel("Normalized Intensity")
-    ax1.set_title("Fe I 5250.2 Å Center-to-Limb Line Profiles: Python vs. Julia")
+    ax1.set_title("$line Å Center-to-Limb Line Profiles: Python vs. Julia")
     ax1.legend(loc="lower right", fontsize=8, ncol=2)
     ax1.grid(true, alpha=0.3)
 
@@ -99,7 +101,7 @@ function compare_disco_python_julia(h5_path::String, disco_root::String)
     ax2.set_ylim(-1e-4, 1e-4)
 
     plt.tight_layout()
-    out_fig = joinpath(@__DIR__, "disco_python_vs_julia_residuals.png")
+    out_fig = joinpath(@__DIR__, "disco_python_vs_julia_residuals_$(line).png")
     plt.savefig(out_fig, dpi=300)
     println("=================================================================")
     println(" Residual plot saved to: ", out_fig)
@@ -107,7 +109,7 @@ function compare_disco_python_julia(h5_path::String, disco_root::String)
 end
 
 if abspath(PROGRAM_FILE) == abspath(@__FILE__)
-    H5_PATH = "/storage/home/efg5335/work/sw/DISCO/GRASS/disco_fe5250_params.h5"
+    H5_PATH = "/storage/home/efg5335/work/sw/DISCO/GRASS/data/disco_$(line)_params.h5"
     DISCO_ROOT = "/storage/home/efg5335/work/sw/DISCO"
     compare_disco_python_julia(H5_PATH, DISCO_ROOT)
 end

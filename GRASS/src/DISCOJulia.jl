@@ -1,13 +1,20 @@
-module DISCOFe5250
+module DISCOJulia
 
 using CUDA
 using HDF5
 using CUDA.Adapt
 
-export DISCOParams, DISCOParamsDevice, to_device, load_disco_fe5250
+export DISCOParams, DISCOParamsDevice, to_device, load_disco
 export disco_component_value, disco_intensity
 
 const COMP_NAMES = ("GT", "OGR", "IgL")
+
+function require_shape(name, values, expected)
+    size(values) == expected ||
+        error("Unexpected $(name) size: expected $(expected), got $(size(values))")
+    all(isfinite, values) || error("$(name) contains non-finite values")
+    return values
+end
 
 struct DISCOParams
     wavelength::Vector{Float32}
@@ -29,7 +36,7 @@ struct DISCOParams
     e2_med::Vector{Float32}
 end
 
-"""Read the HDF5 file produced by export_disco_params.py."""
+"""Read and validate the HDF5 file produced by export_params.py."""
 function DISCOParams(path::AbstractString)
     h5open(path, "r") do f
         a = attrs(f)
@@ -39,50 +46,73 @@ function DISCOParams(path::AbstractString)
         n_mu = Int(a["n_mu"])
         n_wave = Int(a["n_wave"])
         n_pca = Int(a["n_pca"])
+        mu_grid = Float32.(read(f["mu_grid"]))
+
+        n_mu >= 2 || error("n_mu must be at least 2")
+        n_wave >= 2 || error("n_wave must be at least 2")
+        n_pca >= 1 || error("n_pca must be positive")
+        0f0 < mu_min < mu_max <= 1f0 ||
+            error("Invalid mu range: [$(mu_min), $(mu_max)]")
+        require_shape("mu_grid", mu_grid, (n_mu,))
+        isapprox(mu_grid[1], mu_min; atol=eps(Float32)) ||
+            error("mu_grid lower endpoint does not match mu_min")
+        isapprox(mu_grid[end], mu_max; atol=eps(Float32)) ||
+            error("mu_grid upper endpoint does not match mu_max")
+        all(diff(mu_grid) .> 0f0) || error("mu_grid must be strictly increasing")
+        expected_mu = collect(range(mu_min, mu_max; length=n_mu))
+        maximum(abs.(mu_grid .- expected_mu)) <= 8f0 * eps(Float32) ||
+            error("mu_grid must be uniformly spaced")
+        require_shape("wavelength", wavelength, (n_wave,))
+        all(diff(wavelength) .> 0f0) ||
+            error("wavelength must be strictly increasing")
 
         means = ntuple(3) do i
-            Float32.(read(f["pca/$(COMP_NAMES[i])/mean_profile"]))
+            require_shape(
+                "pca/$(COMP_NAMES[i])/mean_profile",
+                Float32.(read(f["pca/$(COMP_NAMES[i])/mean_profile"])),
+                (n_wave,),
+            )
         end
 
-        # Ensure eigenprofiles is (n_pca, n_wave) in Julia
         phis = ntuple(3) do i
             raw = Float32.(read(f["pca/$(COMP_NAMES[i])/eigenprofiles"]))
-            if size(raw) == (n_pca, n_wave)
+            phi = if size(raw) == (n_pca, n_wave)
                 raw
             elseif size(raw) == (n_wave, n_pca)
                 permutedims(raw)
             else
                 error("Unexpected eigenprofiles size for $(COMP_NAMES[i]): $(size(raw))")
             end
+            require_shape("pca/$(COMP_NAMES[i])/eigenprofiles", phi, (n_pca, n_wave))
         end
 
-        # Ensure pca_coeff_grid is (n_pca, n_mu) in Julia
         grids = ntuple(3) do i
             raw = Float32.(read(f["pca/$(COMP_NAMES[i])/pca_coeff_grid"]))
-            if size(raw) == (n_pca, n_mu)
+            grid = if size(raw) == (n_pca, n_mu)
                 raw
             elseif size(raw) == (n_mu, n_pca)
                 permutedims(raw)
             else
                 error("Unexpected PCA grid size for $(COMP_NAMES[i]): $(size(raw))")
             end
+            require_shape("pca/$(COMP_NAMES[i])/pca_coeff_grid", grid, (n_pca, n_mu))
         end
 
         d = f["distributions"]
-        e1a = Float32.(read(d["epsilon1/alpha"]))
-        e1z = Float32.(read(d["epsilon1/zeta"]))
-        e1w = Float32.(read(d["epsilon1/omega"]))
-        e1m = Float32.(read(d["epsilon1/median"]))
+        distribution(name, field) = require_shape(
+            "distributions/$(name)/$(field)",
+            Float32.(read(d["$(name)/$(field)"])),
+            (n_mu,),
+        )
+        e1a = distribution("epsilon1", "alpha")
+        e1z = distribution("epsilon1", "zeta")
+        e1w = distribution("epsilon1", "omega")
+        e1m = distribution("epsilon1", "median")
 
-        e2a = Float32.(read(d["epsilon2/alpha"]))
-        e2z = Float32.(read(d["epsilon2/zeta"]))
-        e2w = Float32.(read(d["epsilon2/omega"]))
-        e2m = Float32.(read(d["epsilon2/median"]))
-
-        @assert length(wavelength) == n_wave
-        @assert length(e1a) == n_mu && length(e2a) == n_mu
-        @assert size(phis[1]) == (n_pca, n_wave)
-        @assert size(grids[1]) == (n_pca, n_mu)
+        e2a = distribution("epsilon2", "alpha")
+        e2z = distribution("epsilon2", "zeta")
+        e2w = distribution("epsilon2", "omega")
+        e2m = distribution("epsilon2", "median")
 
         DISCOParams(wavelength, mu_min, mu_max, n_mu, n_wave, n_pca,
             means, phis, grids, e1a, e1z, e1w, e1m, e2a, e2z, e2w, e2m)
@@ -90,7 +120,7 @@ function DISCOParams(path::AbstractString)
 end
 
 """Load the HDF5 model and immediately copy its arrays to the current GPU."""
-load_disco_fe5250(path::AbstractString) = to_device(DISCOParams(path))
+load_disco(path::AbstractString) = to_device(DISCOParams(path))
 
 struct DISCOParamsDevice{
     V<:AbstractVector{Float32},
@@ -323,4 +353,3 @@ end
 end
 
 end
-
