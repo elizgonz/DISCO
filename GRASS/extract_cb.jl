@@ -41,6 +41,24 @@ function get_disco_profile_gpu(p_device::DISCOParamsDevice, mu::Float32;
     return Array(prof_d) 
 end
 
+function refined_minimum_offset(profile, wavelengths, ref_wl)
+    core_idx = argmin(profile)
+    correction = 0.0
+
+    if 1 < core_idx < length(profile)
+        left = Float64(profile[core_idx - 1])
+        center = Float64(profile[core_idx])
+        right = Float64(profile[core_idx + 1])
+        curvature = left - 2.0 * center + right
+        if curvature > 0.0
+            correction = clamp(0.5 * (left - right) / curvature, -1.0, 1.0)
+        end
+    end
+
+    wavelength_step = step(wavelengths)
+    return wavelengths[core_idx] + correction * wavelength_step - ref_wl
+end
+
 function extract_cb(h5_path::String)
     p_host = DISCOParams(h5_path)
     p_device = to_device(p_host)
@@ -61,13 +79,13 @@ function extract_cb(h5_path::String)
         jl_prof = jl_prof ./ maximum(jl_prof)
 
         jl_cs = CubicSpline(wl_angstroms, jl_prof)
-        wl_new = range(ref_wl - 0.1, ref_wl + 0.1, 500)
+        wl_new = range(ref_wl - 0.1, ref_wl + 0.1; length=500)
         jl_prof_new = jl_cs(wl_new)
 
-        jl_cb[mu] = wl_new[argmin(jl_prof_new)] - ref_wl
+        jl_cb[mu] = refined_minimum_offset(jl_prof_new, wl_new, ref_wl)
     end
 
-    df = DataFrame(Column1 = (jl_cb ./ ref_wl) .* (3*10^8))
+    df = DataFrame(JuliaCB = (jl_cb ./ ref_wl) .* (3*10^8))
 
     CSV.write("$(line).csv", df)
 end
