@@ -16,7 +16,9 @@ line = "Fe5250"
 function kernel_single_profile!(prof_d, p_device, mu, patch_id, epoch_seed)
     w = threadIdx().x + (blockIdx().x - 1) * blockDim().x
     if w <= length(prof_d)
-        prof_d[w] = DISCOJulia.disco_intensity(p_device, mu, Int32(w), patch_id, epoch_seed)
+        prof_d[w] = DISCOJulia.disco_intensity_original(
+            p_device, mu, Int32(w), patch_id, epoch_seed
+        )
     end
     return nothing
 end

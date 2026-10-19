@@ -24,19 +24,15 @@ files = GRASS.get_file(lp)
 line_names = GRASS.get_name(lp)
 
 # get lines to do 
-lines_to_do = ["FeI_6151"]
-a = 0.9194504496324052
-b = -1.389777780781663
+lines_to_do = ["FeI_6173"]
+a = 1.4097714740057676
+b = -2.0650721844470294
 
-MAX_DEG = 83.0
-MU_MIN = Float64(cos(deg2rad(MAX_DEG)))
-MU_MAX = 1.00
-N_MU_DENSE = 4096
-mus_disco = range(MU_MIN, MU_MAX, N_MU_DENSE)
-
-df = CSV.read("/storage/home/efg5335/work/sw/DISCO/GRASS/Fe6152.csv", DataFrame)
-yfit_disco = df.JuliaCB
-
+df = CSV.read("/storage/home/efg5335/work/sw/DISCO/GRASS/data/disco_Fe6173_cb.csv", DataFrame)
+DISCOCB = df.DISCOCB
+PolynomialCB = df.PolynomialCB
+MeasuredCB = df.MeasuredCB
+mus_disco = df.Mu
 # marker/colors for directions
 cs = ["k", "tab:blue", "tab:orange", "tab:green", "tab:pink"]
 ms = [".", ".", ".", ".", "."]
@@ -103,8 +99,10 @@ for i in eachindex(files)
 
     ax1.plot(xfit, (yfit * 1000) .- mean(yfit * 1000), color = "k", lw=2)
 
-    ax1.plot(mus_disco, yfit_disco, color = "pink", lw=2)
-    ax1.plot(mus_disco, yfit_disco .- mean(yfit_disco), color = "r", lw=2)
+    ax1.plot(mus_disco, PolynomialCB, color = "g", lw=2, label = "Polynomial CB")
+    ax1.plot(mus_disco, PolynomialCB .- mean(PolynomialCB), color = "g", ls = "--", lw=2)
+    ax1.plot(mus_disco, MeasuredCB, color = "b", lw=2, label = "Measured CB")
+    ax1.plot(mus_disco, DISCOCB, color = "pink", lw=2, label = "DISCO CB")
 
     ax1.set_xlabel("μ", fontsize=12)
     ax1.set_ylabel("Convective Blueshift (m/s)", fontsize=12)
