@@ -105,9 +105,13 @@ function extract_cb(h5_path::String)
         DISCOCB = original_cb,
         PolynomialCB = polynomial_cb,
         MeasuredCB = (jl_cb ./ ref_wl) .* 3e8,
-        Poly_c0_nm = fill(p_host.cb_poly_c0_nm, length(mus)),
-        Poly_c1_nm_per_mu = fill(p_host.cb_poly_c1_nm_per_mu, length(mus)),
-        Poly_c2_nm_per_mu2 = fill(p_host.cb_poly_c2_nm_per_mu2, length(mus)),
+        constant = fill(p_host.cb_poly_c0_nm / reference_nm * 3e8, length(mus)),
+        a = fill(
+            p_host.cb_poly_c2_nm_per_mu2 / reference_nm * 3e8, length(mus)
+        ),
+        b = fill(
+            p_host.cb_poly_c1_nm_per_mu / reference_nm * 3e8, length(mus)
+        )
     )
 
     CSV.write("data/disco_$(line)_cb.csv", df)
