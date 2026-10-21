@@ -6,9 +6,11 @@ using CUDA.Adapt
 
 export DISCOParams, DISCOParamsDevice, to_device, load_disco
 export disco_component_value, disco_intensity, disco_intensity_original
+export disco_intensity_fixed_cb
 export original_cb_offset, cb_polynomial
 
 const COMP_NAMES = ("GT", "OGR", "IgL")
+const SPEED_OF_LIGHT_KM_S = 299792.458f0
 const REFERENCE_WAVELENGTHS_ANGSTROM = Dict(
     "Fe5250" => 5250.2084,
     "Fe6152" => 6151.6170,
@@ -561,6 +563,101 @@ end
     original_offset = original_cb_offset(p, mu)
     target_offset = cb_polynomial(p, mu)
     wavelength_offset = original_offset - target_offset
+    if wavelength_offset == 0f0
+        return disco_intensity_original(p, mu, wave, patch_id, epoch_seed)
+    end
+    return disco_intensity_original_with_offset(
+        p, mu, wave, wavelength_offset, patch_id, epoch_seed,
+    )
+end
+
+"""
+    disco_intensity_fixed_cb(p, mu, wave, patch_id, epoch_seed, line::Val)
+
+Synthesize a profile using the fixed velocity polynomial instead of the
+load-time fitted wavelength polynomial. Select `Val(1)` for Fe5250,
+`Val(2)` for Fe6152, or `Val(3)` for Fe6173.
+"""
+@inline function disco_intensity_fixed_cb(
+    p::DISCOParamsDevice,
+    mu::Float32,
+    wave::Int32,
+    patch_id::Int32,
+    epoch_seed::UInt32,
+    ::Val{1},
+)
+    return disco_intensity_fixed_cb_impl(
+        p, mu, wave, patch_id, epoch_seed,
+        525.02084f0, 1.6246464f0, -2.2941563f0,
+    )
+end
+
+@inline function disco_intensity_fixed_cb(
+    p::DISCOParamsDevice,
+    mu::Float32,
+    wave::Int32,
+    patch_id::Int32,
+    epoch_seed::UInt32,
+    ::Val{2},
+)
+    return disco_intensity_fixed_cb_impl(
+        p, mu, wave, patch_id, epoch_seed,
+        615.16170f0, 0.91945046f0, -1.3897778f0,
+    )
+end
+
+@inline function disco_intensity_fixed_cb(
+    p::DISCOParamsDevice,
+    mu::Float32,
+    wave::Int32,
+    patch_id::Int32,
+    epoch_seed::UInt32,
+    ::Val{3},
+)
+    return disco_intensity_fixed_cb_impl(
+        p, mu, wave, patch_id, epoch_seed,
+        617.33344f0, 1.4097714f0, -2.0650723f0,
+    )
+end
+
+@inline function disco_intensity_fixed_cb(
+    p::DISCOParamsDevice,
+    mu::Float32,
+    wave::Int32,
+    patch_id::Int32,
+    epoch_seed::UInt32,
+)
+    model_center_nm = p.wavelength[Int(p.n_wave ÷ Int32(2))]
+    if model_center_nm < 550f0
+        return disco_intensity_fixed_cb(
+            p, mu, wave, patch_id, epoch_seed, Val(1)
+        )
+    elseif model_center_nm < 616f0
+        return disco_intensity_fixed_cb(
+            p, mu, wave, patch_id, epoch_seed, Val(2)
+        )
+    else
+        return disco_intensity_fixed_cb(
+            p, mu, wave, patch_id, epoch_seed, Val(3)
+        )
+    end
+end
+
+@inline function disco_intensity_fixed_cb_impl(
+    p::DISCOParamsDevice,
+    mu::Float32,
+    wave::Int32,
+    patch_id::Int32,
+    epoch_seed::UInt32,
+    reference_nm::Float32,
+    c2_km_s::Float32,
+    c1_km_s_per_mu::Float32,
+)
+    x = ifelse(mu < 0f0, 0f0, ifelse(mu > 1f0, 1f0, mu))
+    target_velocity_km_s = c2_km_s * x * x + c1_km_s_per_mu * x
+    target_offset_nm =
+        reference_nm * target_velocity_km_s / SPEED_OF_LIGHT_KM_S
+    wavelength_offset = original_cb_offset(p, mu) - target_offset_nm
     if wavelength_offset == 0f0
         return disco_intensity_original(p, mu, wave, patch_id, epoch_seed)
     end
