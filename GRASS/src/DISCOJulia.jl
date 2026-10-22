@@ -6,7 +6,7 @@ using CUDA.Adapt
 
 export DISCOParams, DISCOParamsDevice, to_device, load_disco
 export disco_component_value, disco_intensity, disco_intensity_original
-export disco_intensity_fixed_cb
+export disco_intensity_fixed_cb, disco_intensity_centered
 export original_cb_offset, cb_polynomial
 
 const COMP_NAMES = ("GT", "OGR", "IgL")
@@ -563,6 +563,29 @@ end
     original_offset = original_cb_offset(p, mu)
     target_offset = cb_polynomial(p, mu)
     wavelength_offset = original_offset - target_offset
+    if wavelength_offset == 0f0
+        return disco_intensity_original(p, mu, wave, patch_id, epoch_seed)
+    end
+    return disco_intensity_original_with_offset(
+        p, mu, wave, wavelength_offset, patch_id, epoch_seed,
+    )
+end
+
+"""
+    disco_intensity_centered(p, mu, wave, patch_id, epoch_seed)
+
+Evaluate the original DISCO profile shifted to remove its convective blueshift.
+The asymmetric DISCO line shape is preserved and its measured core is centered
+on the line's reference wavelength.
+"""
+@inline function disco_intensity_centered(
+    p::DISCOParamsDevice,
+    mu::Float32,
+    wave::Int32,
+    patch_id::Int32,
+    epoch_seed::UInt32,
+)
+    wavelength_offset = original_cb_offset(p, mu)
     if wavelength_offset == 0f0
         return disco_intensity_original(p, mu, wave, patch_id, epoch_seed)
     end

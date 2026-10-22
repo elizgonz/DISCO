@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH -A dfc13_mri
-#SBATCH -p mgc-mri
+#SBATCH -A open
+#SBATCH -p standard
 #SBATCH --gres=gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=50GB
-#SBATCH --time=48:00:00
+#SBATCH --time=4:00:00
 #SBATCH --job-name=DISCO_GRASS_RV
 #SBATCH --chdir=/storage/home/efg5335/work/sw/DISCO/GRASS/
 #SBATCH --output=/storage/home/efg5335/work/sw/DISCO/GRASS/make_lines_example.out
