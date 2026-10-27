@@ -26,10 +26,6 @@ import numpy as np
 import h5py
 from scipy.stats import skewnorm as scipy_skewnorm
 
-# Path setup — resolves relative to DISCO root
-DISCO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-sys.path.insert(0, os.path.join(DISCO_ROOT, "line_creation"))
-
 from make_lines import LineProfileGenerator, exponential
 
 LINE = "Fe5250"
@@ -71,7 +67,7 @@ def export_params(output_path=None, generator=None, line=LINE):
     gen = generator if generator is not None else LineProfileGenerator(line)
     if output_path is None:
         output_path = os.path.join(
-            os.path.dirname(__file__), "data", f"disco_{line}_params.h5")
+            os.path.dirname(__file__), "data", LINE, f"disco_{line}_params.h5")
 
     mu_dense = np.linspace(MU_MIN, MU_MAX, N_MU_DENSE, dtype=np.float32)
     deg_dense = np.minimum(

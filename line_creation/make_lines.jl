@@ -402,48 +402,72 @@ function extract_core_offsets(
     p.wavelength[1] <= reference_nm <= p.wavelength[end] ||
         error("Reference wavelength lies outside the DISCO wavelength grid")
 
-    first_wave = searchsortedfirst(p.wavelength, reference_nm - 0.01)
-    last_wave = searchsortedlast(p.wavelength, reference_nm + 0.01)
-    if last_wave - first_wave < 2
-        center = clamp(searchsortedfirst(p.wavelength, reference_nm), 2, p.n_wave - 1)
-        first_wave = center - 1
-        last_wave = center + 1
-    end
-
     offsets = Vector{Float64}(undef, length(mu_grid))
     for mu_idx in eachindex(mu_grid)
         mu = mu_grid[mu_idx]
-        minimum_wave = first_wave
-        minimum_intensity = host_intensity_original(p, mu, first_wave)
-        for wave in (first_wave + 1):last_wave
-            intensity = host_intensity_original(p, mu, wave)
-            if intensity < minimum_intensity
-                minimum_wave = wave
-                minimum_intensity = intensity
-            end
+
+        profile = Float64[
+            host_intensity_original(p, mu, wave) for wave in eachindex(p.wavelength)
+        ]
+        continuum = maximum(profile)
+        core_idx = argmin(profile)
+        core_intensity = profile[core_idx]
+        top_intensity = 0.05 * continuum
+        if top_intensity <= core_intensity
+            top_intensity = core_intensity + 0.01 * (continuum - core_intensity)
         end
 
-        core_offset = Float64(p.wavelength[minimum_wave]) - reference_nm
-        if first_wave < minimum_wave < last_wave
-            x0 = Float64(p.wavelength[minimum_wave - 1])
-            x1 = Float64(p.wavelength[minimum_wave])
-            x2 = Float64(p.wavelength[minimum_wave + 1])
-            y0 = Float64(host_intensity_original(p, mu, minimum_wave - 1))
-            y1 = Float64(minimum_intensity)
-            y2 = Float64(host_intensity_original(p, mu, minimum_wave + 1))
-            h0 = x1 - x0
-            h1 = x2 - x1
-            slope0 = (y1 - y0) / h0
-            slope1 = (y2 - y1) / h1
-            quadratic = (slope1 - slope0) / (h0 + h1)
-            if quadratic > 0
-                delta = -(slope0 + quadratic * h0) / (2 * quadratic)
-                if -h0 <= delta <= h1
-                    core_offset += delta
+        level_intensities = range(
+            core_intensity + 1e-5 * (top_intensity - core_intensity),
+            top_intensity;
+            length=100,
+        )
+        bisector_wavelength_sum = 0.0
+        valid_levels = 0
+
+        for level_intensity in level_intensities
+            blue_idx = 0
+            for i in core_idx:-1:2
+                if profile[i - 1] >= level_intensity >= profile[i]
+                    blue_idx = i - 1
+                    break
                 end
             end
+
+            red_idx = 0
+            for j in core_idx:(length(profile) - 1)
+                if profile[j] <= level_intensity <= profile[j + 1]
+                    red_idx = j
+                    break
+                end
+            end
+
+            if blue_idx == 0 || red_idx == 0
+                continue
+            end
+
+            blue_fraction =
+                (level_intensity - profile[blue_idx]) /
+                (profile[blue_idx + 1] - profile[blue_idx])
+            lambda_blue = p.wavelength[blue_idx] +
+                          blue_fraction *
+                          (p.wavelength[blue_idx + 1] - p.wavelength[blue_idx])
+
+            red_fraction =
+                (level_intensity - profile[red_idx]) /
+                (profile[red_idx + 1] - profile[red_idx])
+            lambda_red = p.wavelength[red_idx] +
+                         red_fraction *
+                         (p.wavelength[red_idx + 1] - p.wavelength[red_idx])
+
+            bisector_wavelength_sum += 0.5 * (lambda_blue + lambda_red)
+            valid_levels += 1
         end
-        offsets[mu_idx] = core_offset
+
+        valid_levels > 0 ||
+            error("Could not find both bisector wings for μ=$(mu)")
+        mean_bisector_wavelength = bisector_wavelength_sum / valid_levels
+        offsets[mu_idx] = mean_bisector_wavelength - reference_nm
     end
     return offsets
 end

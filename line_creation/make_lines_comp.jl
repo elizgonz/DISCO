@@ -8,7 +8,7 @@ using CUDA
 using Printf
 
 # Include DISCO Julia module
-include(joinpath(@__DIR__, "src", "DISCOJulia.jl"))
+include(joinpath(@__DIR__, "make_lines.jl"))
 using .DISCOJulia
 
 line = "Fe5250"
@@ -111,7 +111,7 @@ function compare_disco_python_julia(h5_path::String, disco_root::String)
 end
 
 if abspath(PROGRAM_FILE) == abspath(@__FILE__)
-    H5_PATH = "/storage/home/efg5335/work/sw/DISCO/GRASS/data/disco_$(line)_params.h5"
+    H5_PATH = "/storage/home/efg5335/work/sw/DISCO/line_creation/data/$(line)/disco_$(line)_params.h5"
     DISCO_ROOT = "/storage/home/efg5335/work/sw/DISCO"
     compare_disco_python_julia(H5_PATH, DISCO_ROOT)
 end

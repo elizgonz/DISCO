@@ -86,7 +86,7 @@ class ExportParamsTest(unittest.TestCase):
         for line in LINES:
             with self.subTest(line=line):
                 generator = LineProfileGenerator(line)
-                data_path = os.path.join(DATA_DIR, f"disco_{line}_params.h5")
+                data_path = os.path.join(DATA_DIR, line, f"disco_{line}_params.h5")
                 self.assertTrue(
                     os.path.isfile(data_path),
                     f"Expected exported model at {data_path}",
